@@ -1,4 +1,4 @@
-// Serves site/build/ as Caddy does in production: plain files, index.html for
+// Serves build/ as Caddy does in production: plain files, index.html for
 // a directory, the right Content-Type, and nothing else. For the e2e tests
 // and for a look before a push (`node scripts/serve.mjs`, then the URL it prints).
 

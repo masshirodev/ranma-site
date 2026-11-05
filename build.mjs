@@ -1,10 +1,11 @@
-// Builds ranma.masshiro.pro into site/build/: one index.html and its assets,
-// each asset under a content-hashed name so it can be cached for a year while
-// the page itself is never cached. No dependencies: what this reads is the
-// repository (the release tag, the example config, the committed captures in
-// static/media) and what it writes is plain files. doc/WEBSITE.md.
+// Builds ranma.masshiro.pro into build/: one index.html and its assets, each
+// asset under a content-hashed name so it can be cached for a year while the
+// page itself is never cached. No dependencies: what this reads is a ranma
+// checkout (the release tag, the example config), this repository's committed
+// captures in static/media, and what it writes is plain files. doc/WEBSITE.md.
 //
-//   node build.mjs [--out DIR]
+//   node build.mjs [--out DIR]          # ranma checked out at ../ranma
+//   RANMA_DIR=~/src/ranma node build.mjs
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -16,7 +17,20 @@ import { toString } from './lib/html.mjs';
 import { page } from './lib/page.mjs';
 
 const site = dirname(fileURLToPath(import.meta.url));
-const repo = join(site, '..');
+
+/**
+ * The ranma checkout the page reads: $RANMA_DIR, or ranma beside this
+ * repository (~/projects/ranma next to ~/projects/ranma-site; CI checks it out
+ * there too). It needs its tags, so not a shallow clone.
+ */
+export function ranmaDir(env = process.env, here = site) {
+	const dir = env.RANMA_DIR || join(here, '..', 'ranma');
+	if (!existsSync(join(dir, 'doc/examples/screenshot/init.lua')))
+		throw new Error(
+			`no ranma checkout at ${dir}: clone masshirodev/ranma there, or set RANMA_DIR (doc/WEBSITE.md, "How it builds")`
+		);
+	return dir;
+}
 const STATIC = join(site, 'static');
 
 // The code panels the theme swatches sit on: dark and light (site.css).
@@ -35,7 +49,7 @@ const walk = (dir) =>
 	);
 
 /** What the page states, read from the repository. */
-export function gather(repoRoot = repo, staticDir = STATIC) {
+export function gather(repoRoot = ranmaDir(), staticDir = STATIC) {
 	const release = latestRelease(repoRoot);
 	const read = (p) => readFileSync(join(repoRoot, p), 'utf8');
 	const init = excerpt(
@@ -102,7 +116,7 @@ export function media(names) {
 
 export function build(
 	out = join(site, 'build'),
-	{ repoRoot = repo, staticDir = STATIC, log = console.log } = {}
+	{ repoRoot = ranmaDir(), staticDir = STATIC, log = console.log } = {}
 ) {
 	const d = gather(repoRoot, staticDir);
 	rmSync(out, { recursive: true, force: true });

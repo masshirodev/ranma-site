@@ -4,6 +4,7 @@ import { chapters, excerpt, latestRelease } from '../lib/data.mjs';
 import { contrast, lua, swatchCss, toml } from '../lib/highlight.mjs';
 import { esc, html, raw, toString } from '../lib/html.mjs';
 import { seconds, tapeChapters, vtt } from '../lib/tape.mjs';
+import { ranmaDir } from '../build.mjs';
 
 test('html escapes what it interpolates, and only that', () => {
 	const evil = '<script>"&\'';
@@ -40,8 +41,8 @@ test('latestRelease refuses a missing tag, an odd one, or no date', () => {
 	assert.throws(() => latestRelease('/r', (_r, a) => (a[0] === 'describe' ? 'v1.0.0' : '')), /no date/);
 });
 
-test('the real repository has a release', () => {
-	const r = latestRelease(new URL('../..', import.meta.url).pathname);
+test('the ranma checkout has a release', () => {
+	const r = latestRelease(ranmaDir());
 	assert.match(r.version, /^\d+\.\d+\.\d+/);
 	assert.match(r.date, /^\d{4}-\d{2}-\d{2}$/);
 });
@@ -184,7 +185,7 @@ test('vtt writes a chapters track the page can read back', () => {
 
 test('the real demo tape has the six chapters the page shows', () => {
 	const { readFileSync } = process.getBuiltinModule('node:fs');
-	const tape = readFileSync(new URL('../../scripts/demo/demo.tape', import.meta.url), 'utf8');
+	const tape = readFileSync(new URL('../demo/demo.tape', import.meta.url), 'utf8');
 	const { chapters: c } = tapeChapters(tape);
 	assert.equal(c.length, 6);
 	assert.equal(c[0].start, 0);

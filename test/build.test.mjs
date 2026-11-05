@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { build, gather, hashed, media } from '../build.mjs';
+import { build, gather, hashed, media, ranmaDir } from '../build.mjs';
 
 const site = fileURLToPath(new URL('..', import.meta.url));
 const scratch = mkdtempSync(join(tmpdir(), 'ranma-site-test-'));
@@ -15,6 +15,13 @@ test('hashed names a file by its bytes', () => {
 	assert.match(a, /^fonts\/x\.[0-9a-f]{10}\.woff2$/);
 	assert.equal(a, hashed('fonts/x.woff2', Buffer.from('a')));
 	assert.notEqual(a, hashed('fonts/x.woff2', Buffer.from('b')));
+});
+
+test('ranmaDir takes RANMA_DIR, else ranma beside this repository, and says when there is none', () => {
+	assert.equal(ranmaDir({}), join(site, '..', 'ranma'));
+	assert.equal(ranmaDir({ RANMA_DIR: ranmaDir({}) }), ranmaDir({}));
+	assert.throws(() => ranmaDir({ RANMA_DIR: scratch }), /no ranma checkout at .*set RANMA_DIR/);
+	assert.throws(() => ranmaDir({}, join(scratch, 'x')), /no ranma checkout at/);
 });
 
 test('gather reads the release and both excerpts from the repository', () => {

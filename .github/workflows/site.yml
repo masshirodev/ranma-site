@@ -1,24 +1,19 @@
-# Builds ranma.masshiro.pro from site/ and puts it on the VPS (doc/WEBSITE.md).
-# The tests gate the deploy. A push to main that touches what the page reads
-# deploys it; so does a release tag (the page shows the latest release) and a
-# run by hand. Pull requests only build and test.
+# Builds ranma.masshiro.pro and puts it on the VPS (doc/WEBSITE.md).
+#
+# The page reads a ranma checkout (the latest release, the example config), so
+# it is built with masshirodev/ranma's main beside this repository. A push here
+# deploys; so does a daily run, which picks up a release or an edit to ranma's
+# example without anyone touching this repository, and a run by hand
+# (`gh workflow run site -R masshirodev/ranma-site`) after a release that should
+# show at once. Pull requests only build and test.
 name: site
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
-    paths:
-      - site/**
-      - doc/examples/screenshot/**
-      - scripts/demo/demo.tape
-      - .github/workflows/site.yml
   pull_request:
-    paths:
-      - site/**
-      - doc/examples/screenshot/**
-      - scripts/demo/demo.tape
-      - .github/workflows/site.yml
+  schedule:
+    - cron: '17 6 * * *'
   workflow_dispatch:
 
 permissions:
@@ -32,7 +27,7 @@ concurrency:
 
 defaults:
   run:
-    working-directory: site
+    working-directory: ranma-site
 
 jobs:
   test:
@@ -40,13 +35,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          # The page shows the latest v* tag, so it needs the tags.
+          path: ranma-site
+      # build.mjs reads ../ranma. The page shows the latest v* tag, so it needs
+      # the tags: not a shallow clone.
+      - uses: actions/checkout@v4
+        with:
+          repository: masshirodev/ranma
+          path: ranma
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
-          cache-dependency-path: site/package-lock.json
+          cache-dependency-path: ranma-site/package-lock.json
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run lint
@@ -56,16 +57,19 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: site
-          path: site/build/
+          path: ranma-site/build/
           retention-days: 7
 
   deploy:
     needs: test
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     environment:
       name: ranma.masshiro.pro
       url: https://ranma.masshiro.pro/
+    defaults:
+      run:
+        working-directory: .
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -79,7 +83,6 @@ jobs:
       # pinned (SITE_KNOWN_HOSTS), never accepted on first sight. SSH on the VPS
       # listens on 8443, not 22.
       - name: rsync to the VPS
-        working-directory: .
         env:
           SITE_DEPLOY_KEY: ${{ secrets.SITE_DEPLOY_KEY }}
           SITE_KNOWN_HOSTS: ${{ secrets.SITE_KNOWN_HOSTS }}
@@ -93,7 +96,6 @@ jobs:
             build/ masshiro@193.203.183.177:public/
           rm -f ~/.ssh/site
       - name: The page is live
-        working-directory: .
         run: |
           for i in 1 2 3 4 5; do
             curl -fsS https://ranma.masshiro.pro/ | grep -q 'A tiling window manager for the terminal' && exit 0

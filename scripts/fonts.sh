@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Makes the site's self-hosted fonts in site/static/fonts/, which are
+# Makes the site's self-hosted fonts in static/fonts/, which are
 # committed: the build copies them and never needs this script, npm or the
 # network. Run it again only to change what the fonts cover (doc/WEBSITE.md,
 # "Fonts").
@@ -49,7 +49,7 @@ subset "$work/JetBrainsMono[wght].ttf" "$out/jetbrains-mono.woff2" "$MONO" 400:7
 subset "$work/JetBrainsMono-Italic[wght].ttf" "$out/jetbrains-mono-italic.woff2" "$MONO" 400:400
 
 plex="$here/node_modules/@fontsource-variable/ibm-plex-sans/files/ibm-plex-sans-latin-wght-normal.woff2"
-[[ -f "$plex" ]] || { echo "fonts.sh: run npm ci in site/ first" >&2; exit 1; }
+[[ -f "$plex" ]] || { echo "fonts.sh: run npm ci first" >&2; exit 1; }
 subset "$plex" "$out/ibm-plex-sans.woff2" "$TEXT" 400:600
 
 # Shippori Mincho ships Japanese in ~120 unicode-range chunks; 欄 and 間 sit
