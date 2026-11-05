@@ -2,12 +2,12 @@
 // visitor without JavaScript gets it, the controls the script adds, phone
 // width, and that nothing leaves for another origin.
 
-import { execFileSync } from 'node:child_process';
 import { expect, test } from '@playwright/test';
+import { ranmaDir } from '../build.mjs';
+import { latestRelease } from '../lib/data.mjs';
 
-const tag = execFileSync('git', ['describe', '--tags', '--abbrev=0', '--match', 'v[0-9]*'], {
-	encoding: 'utf8'
-}).trim();
+// The release the build read: the ranma checkout's, not this repository's.
+const { tag } = latestRelease(ranmaDir());
 
 test('the sections come in the handoff order, and the release is the latest tag', async ({ page }) => {
 	await page.goto('/');
