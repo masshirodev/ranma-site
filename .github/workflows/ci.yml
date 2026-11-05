@@ -1,12 +1,15 @@
-# Builds ranma.masshiro.pro and puts it on the VPS (doc/WEBSITE.md).
+# The release tier of doc/TESTING.md, then the deploy: lint, the suite with its
+# 95% coverage floor and the browser tests, and on main the build goes to the
+# VPS as ranma.masshiro.pro (doc/WEBSITE.md). The repository is public, so
+# Actions minutes are free and this is where its CI belongs.
 #
 # The page reads a ranma checkout (the latest release, the example config), so
 # it is built with masshirodev/ranma's main beside this repository. A push here
 # deploys; so does a daily run, which picks up a release or an edit to ranma's
 # example without anyone touching this repository, and a run by hand
-# (`gh workflow run site -R masshirodev/ranma-site`) after a release that should
+# (`gh workflow run ci -R masshirodev/ranma-site`) after a release that should
 # show at once. Pull requests only build and test.
-name: site
+name: ci
 
 on:
   push:
@@ -46,17 +49,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
-          cache-dependency-path: ranma-site/package-lock.json
-      - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: npm run lint
-      - run: npm test
-      - run: npm run test:e2e
-      - run: npm run build
+          cache: yarn
+          cache-dependency-path: ranma-site/yarn.lock
+      - run: yarn install --frozen-lockfile
+      - run: yarn run playwright install --with-deps chromium
+      - run: yarn run lint
+      - name: Suite, 95% floor
+        run: yarn run test:coverage
+      - run: yarn run test:e2e
+      - run: yarn run build
       - uses: actions/upload-artifact@v4
         with:
-          name: site
+          name: ci
           path: ranma-site/build/
           retention-days: 7
 
@@ -73,7 +77,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: site
+          name: ci
           path: build
       # The key on the VPS is forced through rrsync, rooted at ~/sites/ranma:
       # it can write there and do nothing else. The destination is named

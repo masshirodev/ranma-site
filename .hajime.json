@@ -1,0 +1,12 @@
+{
+	"name": "ranma-site",
+	"title": "ranma-site",
+	"stack": "node",
+	"visibility": "public",
+	"owner": "masshirodev",
+	"ports": {},
+	"floor": 95,
+	"board": null,
+	"skip": [],
+	"push": "main"
+}

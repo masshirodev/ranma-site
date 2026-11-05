@@ -4,3 +4,9 @@ build/
 test-results/
 playwright-report/
 temp/
+
+# Machine-local and scratch, never committed (AGENTS.md)
+AGENTS.local.md
+
+# Node
+coverage/

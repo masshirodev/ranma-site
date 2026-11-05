@@ -23,13 +23,13 @@ npm run serve         # http://localhost:4173/, plain files as Caddy serves them
 
 `build.mjs` has no dependencies. It reads:
 
-| What the page says        | Where it comes from                                                                            |
-| ------------------------- | ---------------------------------------------------------------------------------------------- |
-| The version and its date  | the newest `v*` tag reachable from HEAD (`git describe`), not Cargo.toml, which runs ahead       |
-| The `init.lua` excerpt    | `doc/examples/screenshot/init.lua`, lines 10-18 and 33-46                                       |
-| The `sumi.toml` excerpt   | `doc/examples/screenshot/themes/sumi.toml`, lines 1-16 and 46-51                                |
-| The demo's chapters       | `site/static/media/demo.vtt`, written from the `# chapter:` lines in `scripts/demo/demo.tape`  |
-| The pictures and videos   | `site/static/media/`, committed (below)                                                         |
+| What the page says       | Where it comes from                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------- |
+| The version and its date | the newest `v*` tag reachable from HEAD (`git describe`), not Cargo.toml, which runs ahead    |
+| The `init.lua` excerpt   | `doc/examples/screenshot/init.lua`, lines 10-18 and 33-46                                     |
+| The `sumi.toml` excerpt  | `doc/examples/screenshot/themes/sumi.toml`, lines 1-16 and 46-51                              |
+| The demo's chapters      | `site/static/media/demo.vtt`, written from the `# chapter:` lines in `scripts/demo/demo.tape` |
+| The pictures and videos  | `site/static/media/`, committed (below)                                                       |
 
 Each excerpt pins the start of its first line, so editing the example config
 fails the build ("line 10 reads …") instead of quietly quoting the wrong lines.

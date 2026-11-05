@@ -3,7 +3,10 @@ build/
 temp/
 static/media/
 static/fonts/
-package-lock.json
+yarn.lock
 test-results/
 playwright-report/
 e2e/frame.map.json
+doc/handoffs/
+# Owned by hajime, which rewrites it as its layer has it.
+scripts/hooks-armed.mjs
