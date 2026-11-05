@@ -30,7 +30,7 @@ test('gather reads the release and both excerpts from the repository', () => {
 	assert.equal(d.init[0].n, 10);
 	assert.match(d.init[0].html, /t-api/);
 	assert.ok(d.init.some((l) => l.gap));
-	assert.equal(d.theme.at(-1).n, 51);
+	assert.equal(d.theme.at(-1).n, 55);
 	assert.ok(Array.isArray(d.chapters));
 });
 

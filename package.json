@@ -18,7 +18,8 @@
 		"lint": "prettier --check . && eslint .",
 		"lint-staged": "lint-staged",
 		"hooks:check": "node scripts/hooks-armed.mjs",
-		"prepare": "husky || true"
+		"prepare": "husky || true",
+		"capture": "node capture/run.mjs"
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",

@@ -64,7 +64,7 @@ export function gather(repoRoot = ranmaDir(), staticDir = STATIC) {
 		read('doc/examples/screenshot/themes/sumi.toml'),
 		[
 			[1, 16],
-			[46, 51]
+			[50, 55]
 		],
 		['# sumi', '[border]']
 	).map((l) => (l.gap ? l : { ...l, html: toml(l.text, CODE_PANELS) }));
@@ -77,7 +77,7 @@ export function gather(repoRoot = ranmaDir(), staticDir = STATIC) {
 	};
 }
 
-// The captures the page can show, by the names scripts/captures.sh writes.
+// The captures the page can show, by the names capture/run.mjs writes.
 // Each is optional except the screenshot, which every page needs.
 const CAPTURES = {
 	poster: 'media/screenshot.webp',
@@ -109,7 +109,8 @@ export function media(names) {
 		return null;
 	};
 	const out = Object.fromEntries(Object.entries(CAPTURES).map(([k, s]) => [k, pick(k, s)]));
-	if (!out.poster) throw new Error('static/media/screenshot.webp is missing: run scripts/captures.sh stills');
+	if (!out.poster)
+		throw new Error('static/media/screenshot.webp is missing: run `yarn run capture screenshot`');
 	out.og ??= out.poster;
 	return { media: out, missing: missing.filter((k) => k !== 'og') };
 }
@@ -158,7 +159,7 @@ export function build(
 	);
 	writeFileSync(join(out, 'index.html'), index);
 	for (const key of missing)
-		log(`build: no ${key} capture yet; its panel shows no picture (scripts/captures.sh)`);
+		log(`build: no ${key} capture yet; its panel shows no picture (yarn run capture)`);
 	log(`build: v${d.version} (${d.date}) → ${relative(process.cwd(), out) || '.'}`);
 	return { out, version: d.version, missing };
 }

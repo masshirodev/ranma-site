@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { chapters, excerpt, latestRelease } from '../lib/data.mjs';
 import { contrast, lua, swatchCss, toml } from '../lib/highlight.mjs';
 import { esc, html, raw, toString } from '../lib/html.mjs';
-import { seconds, tapeChapters, vtt } from '../lib/tape.mjs';
+import { keyName, parseTape, seconds, vtt } from '../lib/tape.mjs';
 import { ranmaDir } from '../build.mjs';
 
 test('html escapes what it interpolates, and only that', () => {
@@ -127,41 +127,78 @@ test('seconds reads vhs durations', () => {
 	assert.throws(() => seconds('soon'), /not a duration/);
 });
 
-test('tapeChapters times each chapter from Show, and scales to the recording', () => {
-	const tape = [
-		'Set TypingSpeed 100ms',
-		'Hide',
-		'Type "ignored"',
-		'Sleep 9s',
-		'Show',
-		'# chapter: start',
-		'Type "ab"', // 0.2
-		'Enter', // 0.1
-		'Sleep 1s', // 1
-		'# a plain comment',
-		'Left@50ms 4', // 0.2
-		'Type@10ms "xyz"', // 0.03
-		'Ctrl+B', // 0.1
-		'# chapter: later',
-		'Sleep 500ms',
-		'Output somewhere.mp4'
-	].join('\n');
-	const est = tapeChapters(tape);
-	assert.deepEqual(est.chapters, [
-		{ start: 0, label: 'start' },
-		{ start: 1.6, label: 'later' }
-	]);
-	assert.ok(Math.abs(est.length - 2.13) < 1e-9);
-	const scaled = tapeChapters(tape, 4.26);
-	assert.deepEqual(
-		scaled.chapters.map((c) => c.start),
-		[0, 3.2]
+test('keyName gives kitty the names vhs uses', () => {
+	assert.deepEqual(keyName('Enter'), { key: 'enter', speed: undefined, count: 1 });
+	assert.deepEqual(keyName('Ctrl+B'), { key: 'ctrl+b', speed: undefined, count: 1 });
+	assert.deepEqual(keyName('PageUp@200ms 3'), { key: 'page_up', speed: '200ms', count: 3 });
+	assert.deepEqual(keyName('Ctrl+Shift+Left'), { key: 'ctrl+shift+left', speed: undefined, count: 1 });
+	assert.equal(keyName('b'), null, 'a bare letter is typed, not pressed');
+	assert.equal(keyName('Ctrl+Nope'), null);
+	assert.equal(keyName('two words here'), null);
+});
+
+test('parseTape reads every command, in order, with its line', () => {
+	const steps = parseTape(
+		[
+			'# a comment',
+			'Set Screen 2560x1520',
+			'Set TypingSpeed 60ms',
+			'Output temp/demo.mkv',
+			'Hide',
+			'Type "ranma"',
+			'Enter',
+			'Show',
+			'# chapter: the start',
+			'Type@10ms "fast"',
+			'Ctrl+B',
+			'Left 3',
+			'Sleep 1.5s',
+			'Wait@40s /test result: ok/',
+			'Wait /\\$ $/',
+			'Poster',
+			'Screenshot temp/hero.png'
+		].join('\n')
 	);
-	assert.equal(scaled.length, 4.26);
-	assert.throws(() => tapeChapters(tape, 0), /need a length/);
-	assert.throws(() => tapeChapters('# chapter: early\nShow'), /before Show/);
-	// Hiding again stops the clock; a default TypingSpeed of 50ms applies.
-	assert.equal(tapeChapters('Show\nType "ab"\nHide\nSleep 5s\n# x').length, 0.1);
+	const kinds = steps.map((s) => s.kind);
+	assert.deepEqual(kinds, [
+		'set',
+		'set',
+		'output',
+		'hide',
+		'type',
+		'key',
+		'show',
+		'chapter',
+		'type',
+		'key',
+		'key',
+		'sleep',
+		'wait',
+		'wait',
+		'poster',
+		'screenshot'
+	]);
+	assert.deepEqual(steps[0], { kind: 'set', key: 'Screen', value: '2560x1520', line: 2 });
+	assert.equal(steps[7].label, 'the start');
+	assert.equal(steps[8].speed, 0.01);
+	assert.equal(steps[4].speed, undefined, "the tape's TypingSpeed applies");
+	assert.deepEqual([steps[10].key, steps[10].count], ['left', 3]);
+	assert.equal(steps[11].s, 1.5);
+	assert.equal(steps[12].timeout, 40);
+	assert.ok(steps[12].re.test('test result: ok. 9 passed'));
+	assert.equal(steps[13].timeout, 15, 'a wait gives up after 15s unless it says');
+	assert.ok(steps[13].re.test('one\n$ '), 'multiline: $ ends a row');
+	assert.equal(steps[15].path, 'temp/hero.png');
+});
+
+test('parseTape refuses what it does not know, naming the line', () => {
+	assert.throws(() => parseTape('Show\nTpye "x"'), /line 2: not a command/);
+	assert.throws(() => parseTape('Set Colour red'), /line 1: no setting Colour/);
+	assert.throws(() => parseTape('Set Screen big'), /line 1: Screen can't be "big"/);
+	assert.throws(() => parseTape('# chapter: early\nShow'), /line 1: a chapter before Show/);
+	assert.throws(() => parseTape('Show\nHide\n# chapter: hidden'), /line 3: a chapter before Show/);
+	assert.throws(() => parseTape('Sleep soon'), /not a duration/);
+	assert.throws(() => parseTape('Poster'), /line 1: a poster before Show/);
 });
 
 test('vtt writes a chapters track the page can read back', () => {
@@ -183,11 +220,12 @@ test('vtt writes a chapters track the page can read back', () => {
 	assert.throws(() => vtt([{ start: 5, label: 'late' }], 5), /no length/);
 });
 
-test('the real demo tape has the six chapters the page shows', () => {
-	const { readFileSync } = process.getBuiltinModule('node:fs');
-	const tape = readFileSync(new URL('../demo/demo.tape', import.meta.url), 'utf8');
-	const { chapters: c } = tapeChapters(tape);
-	assert.equal(c.length, 6);
-	assert.equal(c[0].start, 0);
-	assert.ok(c.every((x, i) => i === 0 || x.start > c[i - 1].start));
+test('every tape in capture/tapes parses, and the demo has its six chapters', () => {
+	const { readdirSync, readFileSync } = process.getBuiltinModule('node:fs');
+	const dir = new URL('../capture/tapes/', import.meta.url);
+	const tapes = readdirSync(dir).filter((f) => f.endsWith('.tape'));
+	assert.ok(tapes.includes('demo.tape') && tapes.includes('screenshot.tape'), tapes.join(' '));
+	for (const name of tapes) parseTape(readFileSync(new URL(name, dir), 'utf8'));
+	const demo = parseTape(readFileSync(new URL('demo.tape', dir), 'utf8'));
+	assert.equal(demo.filter((s) => s.kind === 'chapter').length, 6);
 });

@@ -1,0 +1,49 @@
+# The staged home's zsh (capture/stage.sh). The colours are ANSI numbers,
+# which capture/kitty.conf maps onto sumi's palette: 4 ai, 3 hinoki, 2 matcha,
+# 8 kasumi.
+
+HISTFILE=/dev/null
+setopt prompt_subst
+# git's pager: long lines cut at the pane's edge, not wrapped onto the next,
+# and not marked as cut either.
+export LESS='-FRXS --rscroll=-'
+
+autoload -Uz vcs_info
+zstyle ':vcs_info:git:*' formats ' %F{8}on%f %F{3}%b%f'
+
+# Two lines, as in the design: where, and on which branch; then the prompt.
+PROMPT=$'%F{4}%~%f${vcs_info_msg_0_}\n%F{2}❯%f '
+
+# The pane's title, which ranma's border and the bar's pane strip show: the
+# shell and its directory at the prompt, the command while it runs.
+_title() { print -rn -- $'\e]0;'"$1"$'\a'; }
+
+# OSC 133 marks, with the command line in the start mark (cmdline_url), so
+# ranma's command_started and command_finished hooks see each command: the
+# example's toast is raised from them. As ranma's doc/CONFIG.md gives them.
+_ranma_mark_end() {
+	local s=$?
+	print -n "\e]133;D;$s\a\e]133;A\a"
+}
+_ranma_mark_start() {
+	emulate -L zsh
+	local LC_ALL=C c url= i
+	for ((i = 1; i <= ${#1}; i++)); do
+		c=${1[i]}
+		if [[ $c == [A-Za-z0-9._~/-] ]]; then url+=$c; else
+			printf -v c '%%%02X' "'$c"
+			url+=$c
+		fi
+	done
+	print -rn -- $'\e]133;C;cmdline_url='$url$'\a'
+}
+
+precmd() {
+	_ranma_mark_end
+	vcs_info
+	_title "zsh ${PWD/#$HOME/~}"
+}
+preexec() {
+	_ranma_mark_start "$1"
+	_title "$1"
+}

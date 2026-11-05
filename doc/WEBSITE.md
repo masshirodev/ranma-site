@@ -1,39 +1,51 @@
 # The website: ranma.masshiro.pro
 
 One page that says what ranma is, shows it, and gets it installed. Its source is
-[`site/`](../site); it is built into plain files and served by Caddy on the
+this repository; it is built into plain files and served by Caddy on the
 `masshiro.pro` VPS. Card c409 ("A website at ranma.masshiro.pro") on the Ranma
-board; the brief is [`briefs/WEBSITE.md`](briefs/WEBSITE.md) and the design
-handoff is mirrored in [`handoffs/website/`](handoffs/website).
+board made it; the brief is [`briefs/done/WEBSITE.md`](briefs/done/WEBSITE.md)
+and the design handoff is mirrored in [`handoffs/website/`](handoffs/website).
+
+**A repository of its own.** The page began as `site/` in ranma's repository.
+On 2026-11-05 it moved here, history and all (card c475, "The website in a
+repository of its own, with real captures in the sumi look"): someone cloning
+ranma to build or update it should not download a website, its fonts, and the
+videos and screenshots that show ranma off. The README's pictures moved with
+it (`readme/`), and ranma's README links them here by URL.
 
 The site is not where ranma is installed from. `install.sh`, the apt and dnf
-repositories and the signing key stay on GitHub Pages
-(`masshirodev.github.io/ranma`, [`RELEASING.md`](RELEASING.md)), because
-installed machines already point there. The page shows those URLs; it never
-copies the files.
+repositories and the signing key stay on ranma's GitHub Pages
+(`masshirodev.github.io/ranma`, ranma's `doc/RELEASING.md`), because installed
+machines already point there. The page shows those URLs; it never copies the
+files.
 
 ## How it builds
 
 ```sh
-cd site
-npm ci                # dev tools only: Playwright, Prettier, two font packages
-npm run build         # → site/build/
-npm run serve         # http://localhost:4173/, plain files as Caddy serves them
+yarn install          # dev tools only: Playwright, Prettier, ESLint, two font packages
+yarn run build        # → build/
+yarn run serve        # http://localhost:4173/, plain files as Caddy serves them
 ```
+
+**It reads a ranma checkout**: `../ranma`, beside this repository (as
+`~/projects/ranma` is beside `~/projects/ranma-site`), or wherever `RANMA_DIR`
+says. It needs ranma's tags, so not a shallow clone. Without one the build
+stops and says so.
 
 `build.mjs` has no dependencies. It reads:
 
-| What the page says       | Where it comes from                                                                           |
-| ------------------------ | --------------------------------------------------------------------------------------------- |
-| The version and its date | the newest `v*` tag reachable from HEAD (`git describe`), not Cargo.toml, which runs ahead    |
-| The `init.lua` excerpt   | `doc/examples/screenshot/init.lua`, lines 10-18 and 33-46                                     |
-| The `sumi.toml` excerpt  | `doc/examples/screenshot/themes/sumi.toml`, lines 1-16 and 46-51                              |
-| The demo's chapters      | `site/static/media/demo.vtt`, written from the `# chapter:` lines in `scripts/demo/demo.tape` |
-| The pictures and videos  | `site/static/media/`, committed (below)                                                       |
+| What the page says       | Where it comes from                                                                            |
+| ------------------------ | ---------------------------------------------------------------------------------------------- |
+| The version and its date | ranma's newest `v*` tag reachable from HEAD (`git describe`), not Cargo.toml, which runs ahead |
+| The `init.lua` excerpt   | ranma's `doc/examples/screenshot/init.lua`, lines 10-18 and 33-46                              |
+| The `sumi.toml` excerpt  | ranma's `doc/examples/screenshot/themes/sumi.toml`, lines 1-16 and 50-55                       |
+| The demo's chapters      | `static/media/demo.vtt`, written as `capture/tapes/demo.tape` was recorded                     |
+| The pictures and videos  | `static/media/`, committed (below)                                                             |
 
 Each excerpt pins the start of its first line, so editing the example config
 fails the build ("line 10 reads …") instead of quietly quoting the wrong lines.
-Move the range in `build.mjs` when that happens.
+Move the range in `build.mjs` (and its test) when that happens. Before pushing
+such an edit to ranma, build the page against it: `RANMA_DIR=../ranma yarn run build`.
 
 Every asset is written under a content-hashed name (`site.696dfb7191.css`) so
 Caddy can let browsers keep it for a year; `index.html` is never cached. The
@@ -43,38 +55,110 @@ stylesheet for that reason).
 
 ## Captures
 
-Pictures and videos are made by a script and **committed**; a deploy never
-records anything. That was the plan the owner approved on 2026-11-03: a deploy
-stays fast, a half-finished UI never reaches the site by accident, and a new
-capture shows up as a diff to review. The cost is that the page shows ranma as
-of the last capture, so re-record after a change that shows.
+Pictures and videos are recorded and **committed**; a deploy never records
+anything. That was the plan the owner approved on 2026-11-03: a deploy stays
+fast, a half-finished UI never reaches the site by accident, and a new capture
+shows up as a diff to review. The cost is that the page shows ranma as of the
+last capture, so re-record after a change that shows.
+
+They are **real**: ranma in a real kitty, driven by a script. The README used
+to show an AI-made picture of ranma; `screenshot.tape` is that picture's scene,
+recorded. Its look is ranma's `doc/examples/screenshot` (the `sumi` theme)
+exactly as a visitor can copy it, and the toast in it is raised by that
+example's own `command_finished` hook, from a release build that really ran.
 
 ```sh
-site/scripts/captures.sh stills   # doc/screenshot.png → screenshot.webp, og.jpg
-site/scripts/captures.sh videos   # vhs: demo, sessions and copy-mode loops
-site/scripts/captures.sh kitty    # how to take the two stills only kitty can show
+yarn run capture                    # every tape
+yarn run capture screenshot demo    # these
+CAPTURE_VERBOSE=1 yarn run capture copy   # each step, as it plays
+KEEP=1 yarn run capture mobile      # leave the staged world for a look
+CAPTURE_WAIT=60 yarn run capture demo     # wait up to an hour for a quiet machine
 ```
 
-- **`videos`** needs what [`scripts/demo/README.md`](../scripts/demo/README.md)
-  lists (vhs, ttyd, a Chromium, btop, nvim, git) and ffmpeg with libsvtav1 and
-  libx264. It records in the staged home the demo gif uses, on a private ranma
-  server, so no real session is touched. Each tape becomes a WebM (AV1, for
-  browsers that have it), an MP4 (H.264, for the rest) and a poster.
-- **The demo is one recording** with the README's gif: `demo.tape` writes both
-  `doc/demo.gif` and `temp/site/demo.mp4`.
-- **Chapters** come from `# chapter: label` lines in the tape.
-  `site/lib/tape.mjs` adds up what vhs spends before each one, then scales the
-  estimates to the recording's real length, so the drift (vhs adds a little per
-  command) is spread out rather than piling up at the end.
-- **The tapes for the loops** are `site/tapes/sessions.tape` and `copy.tape`.
-- **Two stills need a real kitty**: an image in a pane (vhs draws with xterm.js,
-  which has no kitty graphics) and the mobile view. `captures.sh kitty` says how.
-  Until they exist, their panels show no picture, and the build says so.
+**A take waits for a quiet machine.** ranma's cpu module and btop show what
+the box is doing, and another suite running beside a take puts red 90%
+figures in the picture that have nothing to do with ranma. Before each take
+the rig waits for the one-minute load to fall under half the cores, for up to
+`CAPTURE_WAIT` minutes (15), then records anyway and says so. A failed take
+leaves a picture of what was on screen, `failed-<tape>.png`, beside the
+staged world, and one run at a time holds `capture.lock` there.
+
+What each tape makes:
+
+| Tape              | Makes                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------- |
+| `screenshot.tape` | `readme/screenshot.png` (2560×1520), and from it `static/media/screenshot.webp`, `og.jpg` |
+| `demo.tape`       | `static/media/demo.{webm,mp4,vtt}`, `demo-poster.webp`, and `readme/demo.gif`             |
+| `sessions.tape`   | `static/media/sessions.{webm,mp4}`, `sessions-poster.webp`                                |
+| `copy.tape`       | `static/media/copy.{webm,mp4}`, `copy-poster.webp`                                        |
+| `images.tape`     | `static/media/images.webp`: a picture in a pane, by the kitty graphics protocol           |
+| `mobile.tape`     | `static/media/mobile.webp`: the mobile view, on a terminal that says it is a phone        |
+
+### How a take is recorded
+
+`capture/run.mjs`, for each tape:
+
+1. **Stages a world** (`capture/stage.sh`) under `/mnt/hdd2/ranma-capture`
+   (`CAPTURE_DIR`), never `/tmp`, which is RAM on the workstation: a home of its
+   own with ranma's example config (plus no plugin manager and no restore, and
+   mobile.ranma for the mobile view), a zsh that marks its commands with OSC 133
+   and titles panes as the design does (`capture/zshrc`), nvim in sumi's colours
+   (`capture/nvim`), and a clone of ranma at `~/src/ranma` to work in. Its
+   `XDG_RUNTIME_DIR` is its own, so the ranma it starts is a private server that
+   sees none of the machine's sessions. cargo's target for that clone stays in
+   `/mnt/hdd2/ranma-capture/target` between takes.
+2. **Makes an output no one sees**: a headless Hyprland output, `RANMACAP`, at
+   the tape's `Screen` and `Scale`, whose default workspace is the capture's own.
+   kitty opens there (a window rule sends it, `silent`), so nobody's focus or
+   screen moves. A desktop shell puts its bar on every output, this one too,
+   above even a fullscreen window; so kitty is tiled, filling what the shell
+   leaves, the output is grown by what the shell reserves, and every capture
+   takes kitty's rectangle only. The picture is the `Screen` size exactly,
+   whatever the desktop draws.
+3. **Starts kitty** with `capture/kitty.conf` and nothing of the machine's
+   kitty: sumi's colours as the ANSI palette, JetBrains Mono Nerd Font, no
+   clipboard writes (the copy loop's OSC 52 must not reach the desktop's
+   clipboard).
+4. **Plays the tape** into kitty over its remote-control socket, speaking the
+   protocol directly (the `kitty @` CLI costs 40 ms a call, too slow to type
+   at a person's pace). `wf-recorder` records from `Show` to the end; `grim`
+   takes the stills.
+5. **Takes it all down**, whatever happened: kitty, every process of the
+   world (the ranma server, a build in a pane), the output.
+
+A recording becomes a WebM (AV1, for browsers that have it) and an MP4 (H.264,
+for the rest) at 1920 wide, a poster from its first second, and, for the demo,
+the README's gif from the same take.
+
+It needs Hyprland, kitty, grim, wf-recorder, ffmpeg with libsvtav1 and libx264,
+ImageMagick, zsh, nvim, git, cargo, kitten, btop, and an installed ranma
+(`RANMA_BIN`, else the one on `PATH`). It runs on the workstation only; nothing
+in CI records.
+
+### The tapes
+
+vhs's language, the part of it a script of keys needs (`lib/tape.mjs` reads it,
+strictly: a line it does not know fails the take, naming the line):
+
+- `Set Screen 2560x1520`, `Set Scale 2`, `Set FontSize 10.5`,
+  `Set TypingSpeed 60ms`, `Set Mobile true` (`RANMA_MOBILE=1`).
+- `Output demo`: the tape is a video, named so in `static/media/`.
+- `Hide` / `Show`: recording starts at the first `Show`; what comes before it
+  sets the scene unseen.
+- `Type "text"`, `Type@10ms "text"`; keys as vhs names them, `Enter`,
+  `Escape`, `Ctrl+B`, `Shift+Right 6`, `Left@200ms 3`.
+- `Sleep 1.5s`.
+- `Wait /regex/`, `Wait@600s /regex/`: until kitty's screen matches (15 s
+  unless it says). A take waits for what it shows, a test result or a toast,
+  rather than guessing how long it takes.
+- `Screenshot path`: a PNG as grim takes it, or WebP or JPEG from it.
+- `# chapter: label`: a chapter starts here, timed as the tape plays.
+- `$CAPTURE_ROOT` in a typed command is this repository's root.
 
 ## Fonts
 
-Self-hosted woff2 subsets in `site/static/fonts/`, committed and made by
-`site/scripts/fonts.sh`, about 69 KB together:
+Self-hosted woff2 subsets in `static/fonts/`, committed and made by
+`scripts/fonts.sh`, about 69 KB together:
 
 - **JetBrains Mono** from JetBrains' own v2.304 release (sha256-pinned), not
   fontsource: fontsource's copy drops `← → ❯ ⋯`, which the page sets in mono.
@@ -87,11 +171,12 @@ brotli (`/usr/bin/python3`; mise's Python has neither).
 ## Tests
 
 ```sh
-cd site
-npm run lint      # Prettier
-npm test          # the build's logic, node:test, at least 95% of lines and functions
-npm run test:e2e  # builds, then Playwright at 1440 and on a 390-wide phone
+yarn run lint            # Prettier, then ESLint
+yarn run test:coverage   # the build's logic and the tape grammar, node:test, 95% floor
+yarn run test:e2e        # builds, then Playwright at 1440 and on a 390-wide phone
 ```
+
+[`TESTING.md`](TESTING.md) says where each runs.
 
 - `e2e/frame.spec.mjs` is **generated** from the handoff by
   `~/.config/myconf/design-tools/gen-conformance.mjs` (map: `e2e/frame.map.json`)
@@ -109,21 +194,23 @@ HTML, which reflowed the page and its `<pre>` blocks the first time it ran.
 
 ## Deploying
 
-[`.github/workflows/site.yml`](../.github/workflows/site.yml) runs the three
-checks above on every pull request that touches the site, and on `main` and on
-a `v*` tag it then deploys:
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) builds the page with
+masshirodev/ranma's `main` checked out beside this repository, runs the three
+checks above, and on `main` deploys:
 
-- **What triggers it**: a push to `main` touching `site/`,
-  `doc/examples/screenshot/`, `scripts/demo/demo.tape` or the workflow; a release
-  tag (the page shows the latest release); or a run by hand.
-- **How**: `rsync --delete-delay --delay-updates` of `site/build/` to the VPS,
-  so the new files land together at the end and an old page is never served
+- **What triggers it**: a push to `main`; a daily run (06:17 UTC), which picks
+  up a release or an edit to ranma's example without anyone touching this
+  repository; or a run by hand, `gh workflow run ci -R masshirodev/ranma-site`,
+  after a release that should show at once. Pull requests only build and test.
+- **How**: `rsync --delete-delay --delay-updates` of `build/` to the VPS, so
+  the new files land together at the end and an old page is never served
   half-replaced.
-- **The key** (`SITE_DEPLOY_KEY`, a GitHub Actions secret) is a deploy-only
-  ed25519 key. On the VPS it sits in `~/.ssh/authorized_keys` forced through
-  `rrsync` and rooted at `~/sites/ranma`, with `restrict`: it can write there and
-  nothing else, no shell, no forwarding. If it leaks, the damage is the
-  website's contents.
+- **The key** (`SITE_DEPLOY_KEY`, a GitHub Actions secret of this repository)
+  is a deploy-only ed25519 key, made for it on 2026-11-05 (ranma's own went
+  with the move). On the VPS it sits in `~/.ssh/authorized_keys` forced through
+  `rrsync` and rooted at `~/sites/ranma`, with `restrict`: it can write there
+  and nothing else, no shell, no forwarding. If it leaks, the damage is the
+  website's contents. Its private half exists only as that secret.
 - **The destination is named**, `public/`, never a bare `host:`. Through rrsync
   the two mean the same folder, but without the lock a bare `host:` is the home
   directory, and an `rsync --delete` aimed at one deleted most of the VPS home
@@ -148,13 +235,16 @@ The handoff is [`handoffs/website/Main.dc.html`](handoffs/website/Main.dc.html)
   be the faster, less buggy daily driver". The owner, 2026-11-03: "dont say tuios
   is buggy, seems like we are throwing shade". It now credits tuios as the model
   for the feel and lists ranma's own trade-offs. `page.spec.mjs` holds this; the
-  internal comparison in DESIGN.md's "Why not tuios" stays where it is and is not
-  copy for the site.
+  internal comparison in ranma's DESIGN.md, "Why not tuios", stays where it is
+  and is not copy for the site.
 - **Chapter four is "leader 2 · another workspace"**, not "alt+2": the tape
-  presses the leader, and the label says what the video shows.
+  presses the leader, and the label says what the video shows. **Chapter five
+  is the toast a command raises when it ends out of sight**, not `ranma
+notify`: the recording shows the sumi example's hook, which is what the
+  screenshot's toast is too.
 - **The copy-mode loop ends at the yank.** The design drew a paste on the local
-  side of an ssh pane; vhs runs xterm.js with no system clipboard and no ssh
-  server in the staged home, so a recording could not show it honestly. The
+  side of an ssh pane; the staged home has no ssh server, and the capture kitty
+  refuses clipboard writes, so a recording could not show it honestly. The
   panel's text still says what OSC 52 does.
 - **Captures not yet recorded show no picture**, rather than the design's
   dashed placeholder with its "capture · loop · 1200×675" caption, which was a
@@ -169,9 +259,6 @@ The handoff is [`handoffs/website/Main.dc.html`](handoffs/website/Main.dc.html)
 
 ## What it doesn't do yet
 
-- The two kitty stills (an image in a pane, the mobile view) and the videos need
-  recording: `captures.sh videos` needs vhs and ttyd installed, and the stills
-  are taken by hand. Until then the hero shows the README screenshot.
 - No rendered docs. The man pages and CONFIG.md are linked on GitHub; the
   handoff suggested rendering them at build time as a later step.
 - One language, English.
