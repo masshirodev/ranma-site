@@ -72,6 +72,10 @@ function hyprland() {
 // kitty fills what the shell leaves free, the capture takes kitty's own
 // rectangle, and the output is made larger by what the shell reserves, so
 // that rectangle is the tape's Screen exactly, whatever the desktop draws.
+// A bar's shadow reaches past what it reserves (SekaiPop's, by about four
+// pixels, drew a grey band along the top of every capture), so kitty also
+// keeps MARGIN from every edge, and the output grows by that too.
+const MARGIN = 24;
 function makeOutput(hypr, screen, scale) {
 	const [w, h] = screen.split('x').map(Number);
 	const monitor = () => JSON.parse(hypr('monitors', '-j')).find((m) => m.name === OUTPUT);
@@ -85,18 +89,19 @@ function makeOutput(hypr, screen, scale) {
 	};
 	hypr(
 		'eval',
-		`hl.workspace_rule({ workspace = "${WORKSPACE}", monitor = "${OUTPUT}", default = true, gaps_in = 0, gaps_out = 0, border_size = 0 })`
+		`hl.workspace_rule({ workspace = "${WORKSPACE}", monitor = "${OUTPUT}", default = true, gaps_in = 0, gaps_out = ${MARGIN}, border_size = 0 })`
 	);
 	hypr(
 		'eval',
 		`hl.window_rule({ match = { class = "^(${CLASS})$" }, workspace = "${WORKSPACE} silent", no_anim = true, rounding = 0, no_shadow = true, border_size = 0, opacity = "1.0 override 1.0 override" })`
 	);
-	create(w, h);
+	const pad = 2 * MARGIN * scale;
+	create(w + pad, h + pad);
 	// What the desktop's bars reserve there, in logical pixels: left, top,
 	// right, bottom. A moment for the shell to put its bar on the new output.
 	spawnSync('sleep', ['1']);
 	const [l, t, r, b] = monitor()?.reserved ?? [0, 0, 0, 0];
-	if (l + t + r + b) create(w + Math.round((l + r) * scale), h + Math.round((t + b) * scale));
+	if (l + t + r + b) create(w + pad + Math.round((l + r) * scale), h + pad + Math.round((t + b) * scale));
 }
 
 /** kitty's rectangle on the output, as grim and wf-recorder take it. */

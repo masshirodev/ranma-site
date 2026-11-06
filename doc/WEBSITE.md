@@ -113,7 +113,9 @@ What each tape makes:
    screen moves. A desktop shell puts its bar on every output, this one too,
    above even a fullscreen window; so kitty is tiled, filling what the shell
    leaves, the output is grown by what the shell reserves, and every capture
-   takes kitty's rectangle only. The picture is the `Screen` size exactly,
+   takes kitty's rectangle only. A bar's shadow reaches past what it reserves
+   (SekaiPop's drew a grey band along the top of the first captures), so kitty
+   also keeps 24 pixels from every edge, and the output grows by that too. The picture is the `Screen` size exactly,
    whatever the desktop draws.
 3. **Starts kitty** with `capture/kitty.conf` and nothing of the machine's
    kitty: sumi's colours as the ANSI palette, JetBrains Mono Nerd Font, no

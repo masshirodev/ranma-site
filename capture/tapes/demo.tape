@@ -16,6 +16,15 @@ Sleep 1.5s
 Type@10ms "ranma action 'rename_workspace code' && clear"
 Enter
 Sleep 500ms
+# Build the tests out of sight: every take stages a fresh clone, and a cold
+# build would spend half a minute of the video on chapter five's test run.
+# The mark is printed, not typed (6*7), so the wait cannot match the command.
+Type@10ms "cargo test -q --lib --no-run 2>/dev/null; echo built-$((6*7))"
+Enter
+Wait@900s /built-42/
+Type@10ms "clear"
+Enter
+Sleep 500ms
 Show
 # chapter: dwindle tiles nvim, btop, git log
 
@@ -85,7 +94,7 @@ Sleep 600ms
 Type@20ms "ranma action 'rename_workspace tests' && clear"
 Enter
 Sleep 600ms
-Type "cargo test -q --lib toast"
+Type "cargo test -q --lib"
 Enter
 Sleep 1.5s
 Ctrl+B

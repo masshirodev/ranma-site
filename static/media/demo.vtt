@@ -13,13 +13,13 @@ leader space · layouts
 leader w · a float
 
 4
-00:00:25.600 --> 00:00:34.400
+00:00:25.600 --> 00:00:34.100
 leader 2 · another workspace
 
 5
-00:00:34.400 --> 00:00:39.200
+00:00:34.100 --> 00:00:42.400
 a toast when it ends out of sight
 
 6
-00:00:39.200 --> 00:00:43.433
+00:00:42.400 --> 00:00:46.600
 the which-key hint
