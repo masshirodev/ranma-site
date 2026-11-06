@@ -800,8 +800,14 @@ kbd {
 	padding: 0;
 	background: var(--code-bg);
 	min-width: 0;
+	/* The grid stretches both files to the taller one's height; the
+	   scrolling box takes all of it, so its scrollbar is the panel's
+	   bottom edge rather than halfway down a short file. */
+	display: flex;
+	flex-direction: column;
 }
 .code-scroll {
+	flex: 1;
 	overflow-x: auto;
 	padding: 24px 20px 20px;
 	display: flex;
@@ -981,6 +987,11 @@ kbd {
 .repos {
 	margin-top: 40px;
 }
+/* apt's lines are the longest: it takes the whole row, and dnf and zypper,
+   two lines each, share the next one at the same height. */
+.repos > .repo:first-child {
+	grid-column: 1 / -1;
+}
 .repo {
 	margin: 0;
 	padding: 0;
@@ -996,6 +1007,9 @@ kbd {
 .repo pre {
 	margin: 0;
 	padding: 26px 20px 12px;
+	/* The shorter file takes the spare height, so both scrollbars sit just
+	   above their footers, level with each other. */
+	flex: 1;
 	overflow-x: auto;
 	font-size: 13px;
 	line-height: 1.75;

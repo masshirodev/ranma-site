@@ -37,6 +37,28 @@ test('the page never scrolls sideways', async ({ page }) => {
 	expect(scroll).toBeLessThanOrEqual(client);
 });
 
+test('a panel that scrolls sideways has its scrollbar at its bottom, however short its file', async ({
+	page
+}) => {
+	await page.goto('/');
+	// Each scrolling box ends where its panel's content ends: at the panel's
+	// bottom for the config files, just above the footer for the repositories.
+	const gaps = await page.evaluate(() => {
+		const out = [];
+		for (const s of document.querySelectorAll('.code-scroll')) {
+			const panel = s.closest('.code-file').getBoundingClientRect();
+			out.push(Math.round(panel.bottom - s.getBoundingClientRect().bottom));
+		}
+		for (const pre of document.querySelectorAll('.repo pre')) {
+			const foot = pre.parentElement.querySelector('.repo-foot').getBoundingClientRect();
+			out.push(Math.round(foot.top - pre.getBoundingClientRect().bottom));
+		}
+		return out;
+	});
+	expect(gaps.length).toBeGreaterThan(3);
+	for (const g of gaps) expect(Math.abs(g)).toBeLessThanOrEqual(2);
+});
+
 test('the tuios panel says what ranma does, nothing against tuios', async ({ page }) => {
 	// The owner's call (doc/WEBSITE.md, "Where it departs from the handoff").
 	await page.goto('/');
